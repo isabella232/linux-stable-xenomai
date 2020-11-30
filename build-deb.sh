@@ -25,12 +25,12 @@ fi
 ### https://www.kernel.org/doc/html/latest/kbuild/kconfig.html,kbuild.html
 if [ "$1" == "--clean-build" ]; then
 	echo "will clean previous output before build."
+	make mrproper
 	rm -rf ${D_OUT}
 fi
 
 mkdir -p ${D_OUT}
-export KBUILD_OUTPUT=$D_OUT
-printf "KBUILD_OUTPUT=$KBUILD_OUTPUT\n"
+export KBUILD_OUTPUT=$D_OUT && printf "KBUILD_OUTPUT=$KBUILD_OUTPUT\n"
 
 if [[ $KCONFIG_CONFIG != "" ]]; then
 	echo "rename KCONFIG_CONFIG is not support."
@@ -38,22 +38,16 @@ if [[ $KCONFIG_CONFIG != "" ]]; then
 fi
 
 #make mrproper
-sleep 1
 
-./scripts/kconfig/merge_config.sh -m -r \
+./scripts/kconfig/merge_config.sh -m -r -O ${D_KC}\
 	${D_KC}/x86_64_base_defconfig \
 	${D_KC}/realtime.cfg ${D_KC}/container.cfg ${D_KC}/acrn.cfg \
 	${D_KC}/xenomai.cfg
 
-cp .config $KBUILD_OUTPUT
-sleep 1
+cp ${D_KC}/.config $KBUILD_OUTPUT && sleep 1
 
-make olddefconfig
-sleep 1
+make olddefconfig && sleep 1
 
-### delete "$srctree/.config" otherwise "make bindeb-pkg" will fail when $KBUILD_OUTPUT is not $srctree
-rm .config
-#make bindeb-pkg LOCALVERSION=xenomai_local-test-1 KDEB_PKGVERSION=1 -j$(nproc --all) 2>&1 | tee .build.log
-#mkdir -p debian
+###make bindeb-pkg LOCALVERSION=xenomai_local-test-1 KDEB_PKGVERSION=1 -j$(nproc --all) 2>&1 | tee .build.log
 make bindeb-pkg KDEB_PKGVERSION=1 -j$(nproc --all) 2>&1 | tee .build.log
 
